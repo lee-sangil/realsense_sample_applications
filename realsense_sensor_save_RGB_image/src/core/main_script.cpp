@@ -46,7 +46,7 @@ int main() try
     {
         dev->wait_for_frames();
         // Get color frame and Change the format to Mat files
-        const void * color_frame = dev->get_frame_data(rs::stream::color);
+        const void * color_frame = dev->get_frame_data(rs::stream::rectified_color);
         cv::Mat color(480, 640, CV_8UC3, (void*)color_frame);
 
 
