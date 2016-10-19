@@ -31,3 +31,4 @@
 # Build and Bin Folders
 realsense_sensor_interface/build/
 realsense_sensor_depth_in_meter/build/
+realsense_sensor_save_RGB_image/build/
