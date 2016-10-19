@@ -44,8 +44,8 @@ int main() try
     {
         dev->wait_for_frames();
         // Get depth and color frame and Change the format to Mat files
-        const void * color_frame = dev->get_frame_data(rs::stream::color);
-        const void * depth_frame = dev->get_frame_data(rs::stream::depth_aligned_to_color);
+        const void * color_frame = dev->get_frame_data(rs::stream::rectified_color);
+        const void * depth_frame = dev->get_frame_data(rs::stream::depth_aligned_to_rectified_color);
         cv::Mat color(480, 640, CV_8UC3, (void*)color_frame);
         cv::Mat depth_raw(480, 640, CV_16UC1, (void*)depth_frame);
 
