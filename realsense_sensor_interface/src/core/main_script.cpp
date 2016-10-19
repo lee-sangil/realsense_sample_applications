@@ -40,7 +40,7 @@ int main() try
     rs::intrinsics color_intrin = dev->get_stream_intrinsics(rs::stream::color);
 
 
-    while(cv::waitKey(30) <= 0)
+    while(true)
     {
         dev->wait_for_frames();
         // Get depth and color frame and Change the format to Mat files
