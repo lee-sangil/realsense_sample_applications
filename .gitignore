@@ -29,4 +29,5 @@
 *.app
 
 # Build and Bin Folders
-build/
+realsense_sensor_interface/build/
+realsense_sensor_depth_in_meter/build/
