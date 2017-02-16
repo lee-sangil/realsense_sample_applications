@@ -3,7 +3,7 @@ SET(PROJECT_NAME librealsense)
 PROJECT(${PROJECT_NAME} CXX C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.3)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-set(SENSE_LIB_DIR "/home/icsl/Documents/librealsense/build" CACHE PATH " ")
+set(SENSE_LIB_DIR "/home/icsl/Documents/librealsense/build/devel/lib/" CACHE PATH " ")
 
 
 # Add plain cmake packages

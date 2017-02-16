@@ -2,11 +2,11 @@
 // Note. This program surely is used on R200.
 
 #include <iostream>
+#include <fstream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <librealsense/rs.hpp>
-
 
 int main() try
 {
@@ -28,17 +28,41 @@ int main() try
     std::cout << "Depth scale : " << depth_scale << std::endl;
 
 
+	// Apply depth preset
+	rs::apply_depth_control_preset(dev, 5);
+
     // Configure depth to run at VGA resolution at 60 frames per second
     dev->enable_stream(rs::stream::depth, 640, 480, rs::format::z16, 60);
     dev->enable_stream(rs::stream::color, 640, 480, rs::format::bgr8, 60);
     dev->start();
 
+	// Make folders for saving current image and depth
+	std::string image_filename, depth_filename;
+	std::string image_dir = "log/rgb/";
+	std::string depth_dir = "log/depth/";
+	std::string directory_create_command = "mkdir -p " + image_dir + " " + depth_dir;
+	system(directory_create_command.c_str());
+
+	// Make rgb and depth filename log
+	std::ofstream rgb_log, depth_log;
+	rgb_log.open("log/rgb.txt");
+	depth_log.open("log/depth.txt");
+
+	rgb_log << "# color images" << std::endl;
+	rgb_log << "# file" << std::endl;
+	rgb_log << "# timestamp filename" << std::endl;
+
+	depth_log << "# depth images" << std::endl;
+	depth_log << "# file" << std::endl;
+	depth_log << "# timestamp filename" << std::endl;
 
     // Get intrinsics and extrinsics
     rs::intrinsics depth_intrin = dev->get_stream_intrinsics(rs::stream::depth);
     rs::extrinsics depth_to_color = dev->get_extrinsics(rs::stream::depth, rs::stream::color);
     rs::intrinsics color_intrin = dev->get_stream_intrinsics(rs::stream::color);
-
+	
+	// Buffer for filename
+	const char* timestamp_char;
 
     while(true)
     {
@@ -46,13 +70,30 @@ int main() try
         // Get depth and color frame and Change the format to Mat files
         const void * color_frame = dev->get_frame_data(rs::stream::rectified_color);
         const void * depth_frame = dev->get_frame_data(rs::stream::depth_aligned_to_rectified_color);
+		double timestamp = dev->get_frame_timestamp(rs::stream::color);
+
         cv::Mat color(480, 640, CV_8UC3, (void*)color_frame);
         cv::Mat depth_raw(480, 640, CV_16UC1, (void*)depth_frame);
 
+		// Change filename
+		char timestamp_char[255];
+		char filename[255];
+		sprintf(timestamp_char, "%010.3f", timestamp);
+		sprintf(filename, "%010.3f.png", timestamp);
+		image_filename = image_dir + filename;
+		depth_filename = depth_dir + filename;
+		std::cout << filename << std::endl;
+
         // RGB and depth image
-        cv::imshow("color", color);
+		cv::imshow("color", color);
         cv::imshow("depth_raw", depth_raw);
         cv::waitKey(1);
+
+		// Save current image and depth
+		cv::imwrite(image_filename, color);
+		cv::imwrite(depth_filename, depth_raw);
+		rgb_log << timestamp_char << " rgb/" << filename << std::endl;
+		depth_log << timestamp_char << " depth/" << filename << std::endl;
    }
 
 
