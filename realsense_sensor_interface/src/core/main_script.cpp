@@ -2,14 +2,26 @@
 // Note. This program surely is used on R200.
 
 #include <iostream>
+#include <cstring>
 #include <fstream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <librealsense/rs.hpp>
 
-int main() try
+int main(int argc, char* argv[]) try
 {
+	bool isSave = false;
+	if(argc != 3){
+		std::cout << "Usage: ./librealsense --save [bool, default is false]" << std::endl;
+	}
+	else{
+		if(!strcmp(argv[1], "--save"))
+			isSave = argv[2];
+		else
+			std::cout << "Usage: ./librealsense --save [bool, default is false]" << std::endl;
+	}
+
     // Create a context object. This object owns the handles to all connected realsense devices.
     rs::context ctx;
     std::cout << "There are " << ctx.get_device_count() << " connected RealSense device.\n" << std::endl;
@@ -60,7 +72,33 @@ int main() try
     rs::intrinsics depth_intrin = dev->get_stream_intrinsics(rs::stream::depth);
     rs::extrinsics depth_to_color = dev->get_extrinsics(rs::stream::depth, rs::stream::color);
     rs::intrinsics color_intrin = dev->get_stream_intrinsics(rs::stream::color);
+
+	std::cout.precision(10);
+	std::cout << "# Intrinsic matrix" << std::endl;
+	std::cout << "fx: " << color_intrin.fx << std::endl;
+	std::cout << "fy: " << color_intrin.fy << std::endl;
+	std::cout << "cx: " << color_intrin.ppx << std::endl;
+	std::cout << "cy: " << color_intrin.ppy << std::endl;
 	
+	std::cout << "# extrinsic matrix" << std::endl;
+	for(int i=0;i<3;i++)
+		std::cout << "t[" << i << "]: " << depth_to_color.translation[i] << std::endl;
+	
+	for(int i=0;i<9;i++)
+		std::cout << "r[" << i << "]: " << depth_to_color.rotation[i] << std::endl;
+
+	while(1){
+		std::cout << std::endl << "Continue?[y/n]";
+		
+		char input[2];
+		std::cin >> input;
+
+		if(!strcmp(input, "n"))
+			return EXIT_SUCCESS;
+		else if(!strcmp(input, "y"))
+			break;
+	}
+
 	// Buffer for filename
 	const char* timestamp_char;
 
@@ -70,10 +108,13 @@ int main() try
         // Get depth and color frame and Change the format to Mat files
         const void * color_frame = dev->get_frame_data(rs::stream::rectified_color);
         const void * depth_frame = dev->get_frame_data(rs::stream::depth_aligned_to_rectified_color);
+		const void * depth_unaligned = dev->get_frame_data(rs::stream::depth);
+
 		double timestamp = dev->get_frame_timestamp(rs::stream::color);
 
         cv::Mat color(480, 640, CV_8UC3, (void*)color_frame);
         cv::Mat depth_raw(480, 640, CV_16UC1, (void*)depth_frame);
+		cv::Mat depth(480, 640, CV_16UC1, (void*)depth_unaligned);
 
 		// Change filename
 		char timestamp_char[255];
@@ -86,14 +127,17 @@ int main() try
 
         // RGB and depth image
 		cv::imshow("color", color);
-        cv::imshow("depth_raw", depth_raw);
+        cv::imshow("depth_aligned_with_color", depth_raw);
+		cv::imshow("depth_raw", depth);
         cv::waitKey(1);
-
-		// Save current image and depth
-		cv::imwrite(image_filename, color);
-		cv::imwrite(depth_filename, depth_raw);
-		rgb_log << timestamp_char << " rgb/" << filename << std::endl;
-		depth_log << timestamp_char << " depth/" << filename << std::endl;
+		
+		if(isSave){
+			// Save current image and depth
+			cv::imwrite(image_filename, color);
+			cv::imwrite(depth_filename, depth_raw);
+			rgb_log << timestamp_char << " rgb/" << filename << std::endl;
+			depth_log << timestamp_char << " depth/" << filename << std::endl;
+		}
    }
 
 
