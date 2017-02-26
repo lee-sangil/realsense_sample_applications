@@ -12,15 +12,6 @@
 int main(int argc, char* argv[]) try
 {
 	bool isSave = false;
-	if(argc != 3){
-		std::cout << "Usage: ./librealsense --save [bool, default is false]" << std::endl;
-	}
-	else{
-		if(!strcmp(argv[1], "--save"))
-			isSave = argv[2];
-		else
-			std::cout << "Usage: ./librealsense --save [bool, default is false]" << std::endl;
-	}
 
 	// Create a context object. This object owns the handles to all connected realsense devices.
 	rs::context ctx;
@@ -38,10 +29,7 @@ int main(int argc, char* argv[]) try
 	std::cout << "\nUsing device 0, an " << dev->get_name() << std::endl;
 	std::cout << "Serial number: " << dev->get_serial() << std::endl;
 	std::cout << "Firmware version: " << dev->get_firmware_version() << std::endl;
-	std::cout << "Depth scale: " << depth_scale << std::endl;
-
-	std::string temp = (isSave == true)? "true": "false";
-	std::cout << "Save: " << temp << std::endl << std::endl;
+	std::cout << "Depth scale: " << depth_scale << std::endl << std::endl;
 
 	// Apply depth preset
 	rs::apply_depth_control_preset(dev, 5);
@@ -81,7 +69,7 @@ int main(int argc, char* argv[]) try
 	std::cout << "fx: " << color_intrin.fx << std::endl;
 	std::cout << "fy: " << color_intrin.fy << std::endl;
 	std::cout << "cx: " << color_intrin.ppx << std::endl;
-	std::cout << "cy: " << color_intrin.ppy << std::endl;
+	std::cout << "cy: " << color_intrin.ppy << std::endl << std::endl;
 
 	std::cout << "# extrinsic matrix" << std::endl;
 	for(int i=0;i<3;i++)
@@ -90,20 +78,14 @@ int main(int argc, char* argv[]) try
 	for(int i=0;i<9;i++)
 		std::cout << "r[" << i << "]: " << depth_to_color.rotation[i] << std::endl;
 
-	while(1){
-		std::cout << std::endl << "Continue?[y/n]";
+	std::cout << std::endl << "Press ENTER to Continue";
+	std::cin.ignore();
 
-		char input[2];
-		std::cin >> input;
-
-		if(!strcmp(input, "n"))
-			return EXIT_SUCCESS;
-		else if(!strcmp(input, "y"))
-			break;
-	}
+	std::cout << "Press S to save" << std::endl;
 
 	// Buffer for filename
 	char filename[255];
+	char c;
 
 	while(true)
 	{
@@ -128,19 +110,26 @@ int main(int argc, char* argv[]) try
 		sprintf(filename, "%010.3f", timestamp);
 		image_filename = image_dir + filename + ".png";
 		depth_filename = depth_dir + filename + ".png";
-		std::cout << filename << "ms" << std::endl;
+
+		if( isSave )
+			std::cout << filename << "ms" << std::endl;
 
 		// RGB and depth image
 		cv::imshow("color", color);
 		cv::imshow("depth_aligned_with_color", depth_aligned);
 		cv::imshow("depth_raw", depth_raw);
 		cv::imshow("depth_in_meter", depth_meter);
-		cv::waitKey(1);
 
-		if(isSave){
+		c = cv::waitKey(1);
+		if( isSave==false && (c=='s' || c=='S') )
+			isSave=true;
+		else if( c == 'q' || c == 'Q' )
+			break;
+
+		if( isSave ){
 			// Save current image and depth
 			cv::imwrite(image_filename, color);
-			cv::imwrite(depth_filename, depth_aligned);
+			cv::imwrite(depth_filename, depth_meter);
 			rgb_log << filename << " rgb/" << filename << ".png" << std::endl;
 			depth_log << filename << " depth/" << filename << ".png" << std::endl;
 		}
