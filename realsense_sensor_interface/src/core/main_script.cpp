@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) try
 	std::cout << "Depth scale: " << depth_scale << std::endl << std::endl;
 
 	// Apply depth preset
-	rs::apply_depth_control_preset(dev, 5);
+	dev->set_option(rs::option::r200_lr_auto_exposure_enabled, true); 
 
 	// Configure depth to run at VGA resolution at 60 frames per second
 	dev->enable_stream(rs::stream::depth, 640, 480, rs::format::z16, 60);
@@ -85,51 +85,59 @@ int main(int argc, char* argv[]) try
 
 	// Buffer for filename
 	char filename[255];
-	char c;
+	char cinput;
+
+	const void *color_frame, *depth_aligned_frame, *depth_raw_frame;
+	long int frame_counter = 0;
+	double timestamp;
 
 	while(true)
 	{
 		dev->wait_for_frames();
 
 		// Get depth and color frame and Change the format to Mat files
-		const void * color_frame = dev->get_frame_data(rs::stream::rectified_color);
-		const void * depth_aligned_frame = dev->get_frame_data(rs::stream::depth_aligned_to_rectified_color);
-		const void * depth_raw_frame = dev->get_frame_data(rs::stream::depth);
-
-		double timestamp = dev->get_frame_timestamp(rs::stream::color);
+		timestamp = dev->get_frame_timestamp(rs::stream::color);
+		color_frame = dev->get_frame_data(rs::stream::rectified_color);
+		depth_aligned_frame = dev->get_frame_data(rs::stream::depth_aligned_to_rectified_color);
 
 		cv::Mat color(480, 640, CV_8UC3, (void*)color_frame);
 		cv::Mat depth_aligned(480, 640, CV_16UC1, (void*)depth_aligned_frame);
-		cv::Mat depth_raw(480, 640, CV_16UC1, (void*)depth_raw_frame);
-		cv::Mat depth_meter(480, 640, CV_16UC1, (void*)depth_raw_frame);
 
-		depth_aligned.convertTo(depth_meter, CV_64FC1);
-		depth_meter = depth_meter * depth_scale;
+		if( !isSave ){
+			depth_raw_frame = dev->get_frame_data(rs::stream::depth);
+			cv::Mat depth_raw(480, 640, CV_16UC1, (void*)depth_raw_frame);
 
-		// Change filename
-		sprintf(filename, "%010.3f", timestamp);
-		image_filename = image_dir + filename + ".png";
-		depth_filename = depth_dir + filename + ".png";
+			cv::Mat depth_meter;
+			depth_aligned.convertTo(depth_meter, CV_64FC1);
+			depth_meter = depth_meter * depth_scale;
 
-		if( isSave )
-			std::cout << filename << "ms" << std::endl;
+			// RGB and Depth image
+			cv::imshow("color", color);
+			cv::imshow("depth_raw", depth_raw);
+			cv::imshow("depth_in_meter", depth_meter);
+			cv::imshow("depth_aligned_with_color", depth_aligned);
+		}
 
-		// RGB and depth image
-		cv::imshow("color", color);
-		cv::imshow("depth_aligned_with_color", depth_aligned);
-		cv::imshow("depth_raw", depth_raw);
-		cv::imshow("depth_in_meter", depth_meter);
+		if (++frame_counter%15==0){
+			cinput = cv::waitKey(1);
 
-		c = cv::waitKey(1);
-		if( isSave==false && (c=='s' || c=='S') )
-			isSave=true;
-		else if( c == 'q' || c == 'Q' )
-			break;
+			if( isSave==false && (cinput=='s' || cinput=='S') )
+				isSave = true;
+			else if( cinput=='q' || cinput=='Q' )
+				break;
+		}
 
 		if( isSave ){
+			std::cout << filename << "ms" << std::endl;
+
+			// Change filename
+			sprintf(filename, "%010.3f", timestamp);
+			image_filename = image_dir + filename + ".png";
+			depth_filename = depth_dir + filename + ".png";
+			
 			// Save current image and depth
 			cv::imwrite(image_filename, color);
-			cv::imwrite(depth_filename, depth_meter);
+			cv::imwrite(depth_filename, depth_aligned);
 			rgb_log << filename << " rgb/" << filename << ".png" << std::endl;
 			depth_log << filename << " depth/" << filename << ".png" << std::endl;
 		}
